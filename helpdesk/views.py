@@ -3,7 +3,8 @@ from io import BytesIO
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.validators import validate_email
 from django.db.models import Avg, Count, F, Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -318,6 +319,17 @@ def profile_view(request):
             profile.max_id = ""
         elif request.POST.get("action") == "new_code":
             profile.link_code = ""
+        elif request.POST.get("action") == "email":
+            email = request.POST.get("email", "").strip()
+            try:
+                validate_email(email) if email else None
+            except ValidationError:
+                messages.error(request, "Похоже, в адресе почты ошибка. Проверьте и сохраните ещё раз.")
+                return redirect("profile")
+            request.user.email = email
+            request.user.save(update_fields=["email"])
+            profile.notify_email = bool(request.POST.get("notify_email"))
+            messages.success(request, "Настройки почты сохранены.")
         profile.save()
         return redirect("profile")
     profile.ensure_link_code()

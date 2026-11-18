@@ -14,6 +14,7 @@ from django.utils import timezone
 from helpdesk.models import (
     BotSession, Category, Department, KBArticle, Priority, Profile, SLARule, SupportGroup, Ticket, TicketHistory,
 )
+from helpdesk.services import notify
 from helpdesk.services import tickets as svc
 
 PASSWORD = "demo12345"
@@ -137,8 +138,13 @@ class Command(BaseCommand):
         parser.add_argument("--tickets", type=int, default=250)
         parser.add_argument("--days", type=int, default=60)
 
-    @transaction.atomic
-    def handle(self, *args, clear=False, tickets=250, days=60, **opts):
+    def handle(self, *args, **opts):
+        # Уведомления отключены, иначе по каждой демо-заявке уйдут письма и сообщения.
+        # atomic внутри suppressed(): отложенные on_commit-уведомления тоже попадают под отключение.
+        with notify.suppressed(), transaction.atomic():
+            self._handle(**opts)
+
+    def _handle(self, clear=False, tickets=250, days=60, **opts):
         random.seed(42)
         User = get_user_model()
         if clear:
@@ -166,7 +172,8 @@ class Command(BaseCommand):
         it_dep, _ = Department.objects.get_or_create(name="ИТ-отдел")
 
         def make_user(login, last, first, role, **profile):
-            u, created = User.objects.get_or_create(username=login, defaults={"first_name": first, "last_name": last})
+            u, created = User.objects.get_or_create(username=login, defaults={
+                "first_name": first, "last_name": last, "email": f"{login}@poisk.local"})
             if created:
                 u.set_password(PASSWORD)
                 u.save()

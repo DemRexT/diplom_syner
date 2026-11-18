@@ -7,6 +7,19 @@
     <h2 class="h6">{{ user.get_full_name|default:user.username }}</h2>
     <div class="small text-body-secondary">{{ p.get_role_display }}{% if p.position %} · {{ p.position }}{% endif %}{% if p.department %} · {{ p.department }}{% endif %}</div>
     {% if p.support_group %}<div class="small mt-1">Группа поддержки: {{ p.support_group }}</div>{% endif %}
+  </div>
+  <div class="card card-body mt-3">
+    <h2 class="h6">Уведомления на почту</h2>
+    <form method="post" class="d-flex flex-column gap-2">{% csrf_token %}
+      <input type="hidden" name="action" value="email">
+      <label class="form-label small mb-0" for="id_email">E-mail</label>
+      <input class="form-control" type="email" id="id_email" name="email" value="{{ user.email }}" placeholder="name@poisk.ru">
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="id_notify_email" name="notify_email" {% if p.notify_email %}checked{% endif %}>
+        <label class="form-check-label small" for="id_notify_email">Присылать письма о новых ответах и смене статуса заявок</label>
+      </div>
+      <div><button class="btn btn-sm btn-primary">Сохранить</button></div>
+    </form>
   </div></div>
   <div class="col-lg-7"><div class="card card-body">
     <h2 class="h6">Бот ИТ-поддержки</h2>

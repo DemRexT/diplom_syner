@@ -4,7 +4,8 @@ from io import StringIO
 
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
-from django.test import TestCase
+from django.core import mail
+from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from helpdesk.bots import core
@@ -164,3 +165,40 @@ class WebTests(BaseCase):
         t = Ticket.objects.get()
         self.assertRedirects(r, f"/tickets/{t.pk}/")
         self.assertEqual(t.category.name, "Оборудование")
+
+
+@override_settings(EMAIL_ASYNC=False, EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+class EmailTests(BaseCase):
+    def test_email_on_create_and_comment(self):
+        with self.captureOnCommitCallbacks(execute=True):
+            t = svc.create_ticket(self.author, "Не печатает принтер", "Кабинет 312")
+        recipients = [m.to[0] for m in mail.outbox]
+        self.assertIn("petrova@poisk.local", recipients)            # автору: заявка создана
+        self.assertIn(t.assignee.email, recipients)                  # исполнителю: новая заявка
+        author_mail = next(m for m in mail.outbox if m.to == ["petrova@poisk.local"])
+        self.assertIn(f"#{t.pk}", author_mail.subject)
+        self.assertIn(f"/tickets/{t.pk}/", author_mail.body)
+
+        mail.outbox.clear()
+        svc.add_comment(t, t.assignee, "Подключился удалённо")
+        self.assertEqual(mail.outbox[0].to, ["petrova@poisk.local"])
+        self.assertIn("Подключился удалённо", mail.outbox[0].body)
+
+    def test_email_disabled_in_profile(self):
+        Profile.objects.filter(user=self.author).update(notify_email=False)
+        self.author.refresh_from_db()
+        with self.captureOnCommitCallbacks(execute=True):
+            svc.create_ticket(self.author, "Не печатает принтер", "Кабинет 312")
+        self.assertNotIn("petrova@poisk.local", [m.to[0] for m in mail.outbox])
+
+    def test_seed_sends_nothing(self):
+        mail.outbox.clear()
+        call_command("seed_demo", tickets=10, stdout=StringIO())
+        self.assertEqual(mail.outbox, [])
+
+    def test_profile_saves_email(self):
+        self.client.force_login(self.author)
+        self.client.post("/profile/", {"action": "email", "email": "irina@example.ru"})
+        self.author.refresh_from_db()
+        self.assertEqual(self.author.email, "irina@example.ru")
+        self.assertFalse(self.author.profile.notify_email)

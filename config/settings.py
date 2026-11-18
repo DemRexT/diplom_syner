@@ -43,7 +43,6 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",  # раздача CSS/JS без отдельного веб-сервера
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -103,6 +102,10 @@ TIME_ZONE = "Europe/Moscow"
 USE_I18N = True
 USE_TZ = True
 
+if not DEBUG:
+    # на сервере CSS/JS раздаёт whitenoise (локально это делает runserver)
+    MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
+
 STATIC_URL = "static/"
 STATIC_ROOT = Path(os.getenv("STATIC_ROOT", BASE_DIR / "staticfiles"))
 MEDIA_URL = "media/"
@@ -135,6 +138,21 @@ LOGOUT_REDIRECT_URL = "login"
 SITE_URL = os.getenv("SITE_URL", "http://127.0.0.1:8000")
 SLA_WARNING_SHARE = 0.25      # предупреждать, когда осталось < 25% времени SLA
 AUTO_CLOSE_DAYS = 3           # автозакрытие решённых заявок без подтверждения
+
+# --- Почта ---
+# Если EMAIL_HOST не задан, письма не отправляются, а печатаются в консоль (удобно для проверки).
+EMAIL_HOST = os.getenv("EMAIL_HOST", "")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "465"))
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_SSL = env_bool("EMAIL_USE_SSL", EMAIL_PORT == 465)
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", EMAIL_PORT == 587)
+EMAIL_TIMEOUT = 15
+EMAIL_BACKEND = ("django.core.mail.backends.smtp.EmailBackend" if EMAIL_HOST
+                 else "django.core.mail.backends.console.EmailBackend")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "") or f"ServiceDesk ПМ <{EMAIL_HOST_USER or 'servicedesk@localhost'}>"
+# Письма отправляются в фоне, чтобы страница не ждала почтовый сервер
+EMAIL_ASYNC = env_bool("EMAIL_ASYNC", True)
 
 # --- Боты ---
 VK_TOKEN = os.getenv("VK_TOKEN", "")

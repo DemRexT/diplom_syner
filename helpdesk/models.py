@@ -98,6 +98,7 @@ class Profile(models.Model):
     vk_id = models.CharField("ID ВКонтакте", max_length=32, blank=True)
     max_id = models.CharField("ID в MAX", max_length=32, blank=True)
     link_code = models.CharField("Код привязки бота", max_length=6, blank=True)
+    notify_email = models.BooleanField("Уведомления на почту", default=True)
 
     class Meta:
         verbose_name = "Профиль"
