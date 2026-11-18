@@ -49,14 +49,28 @@ def build_keyboard(reply: Reply) -> str:
     return json.dumps({"one_time": False, "inline": False, "buttons": rows}, ensure_ascii=False)
 
 
+_keyboard_warned = False
+
+
 def send(peer_id, reply: Reply):
-    call(
-        "messages.send",
-        peer_id=peer_id,
-        random_id=random.randint(1, 2**31 - 1),
-        message=reply.text,
-        keyboard=build_keyboard(reply),
-    )
+    params = dict(peer_id=peer_id, random_id=random.randint(1, 2**31 - 1), message=reply.text)
+    try:
+        call("messages.send", keyboard=build_keyboard(reply), **params)
+    except VKError as exc:
+        # Кнопки доступны, только если в сообществе включены «Возможности ботов».
+        # Если выключены — отвечаем без кнопок, чтобы бот не молчал.
+        if "chat bot feature" not in str(exc).lower() and "keyboard" not in str(exc).lower():
+            raise
+        global _keyboard_warned
+        if not _keyboard_warned:
+            log.warning("Кнопки не работают: включите в сообществе «Управление → Сообщения → "
+                        "Настройки для бота → Возможности ботов». Пока отвечаю без кнопок.")
+            _keyboard_warned = True
+        if reply.keyboard:
+            hints = [b.label for row in reply.keyboard for b in row]
+            params["message"] += "\n\nНапишите: " + " / ".join(hints)
+        params["random_id"] = random.randint(1, 2**31 - 1)
+        call("messages.send", **params)
 
 
 def run_forever(handle):

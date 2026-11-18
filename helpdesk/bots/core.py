@@ -29,6 +29,8 @@ CANCEL = [[Button("✖ Отмена", {"cmd": "menu"}, "negative")]]
 TEXT_COMMANDS = {
     "начать": "start", "старт": "start", "start": "start", "/start": "start", "меню": "menu",
     "новая заявка": "new", "мои заявки": "my", "база знаний": "kb", "отмена": "menu",
+    "да, помогло": "kb_helped", "помогло": "kb_helped",
+    "нет, создать заявку": "create", "создать заявку": "create",
 }
 
 ID_FIELD = {"vk": "vk_id", "max": "max_id"}
@@ -38,7 +40,7 @@ CHANNEL = {"vk": Ticket.Channel.VK, "max": Ticket.Channel.MAX}
 def handle(platform: str, user_id: str, text: str, payload: dict) -> list[Reply]:
     session, _ = BotSession.objects.get_or_create(platform=platform, external_id=user_id)
     text = (text or "").strip()
-    cmd = payload.get("cmd") or TEXT_COMMANDS.get(text.lower().lstrip("📝📋📚✖ ").strip())
+    cmd = payload.get("cmd") or TEXT_COMMANDS.get(text.lower().lstrip("📝📋📚✖✅ ").strip())
 
     profile = Profile.objects.filter(**{ID_FIELD[platform]: user_id}).select_related("user").first()
     if profile is None:
