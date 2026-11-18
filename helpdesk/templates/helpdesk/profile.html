@@ -1,0 +1,26 @@
+{% extends "helpdesk/base.html" %}
+{% block title %}Профиль{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3">Профиль и мессенджеры</h1>
+<div class="row g-3">
+  <div class="col-lg-5"><div class="card card-body">
+    <h2 class="h6">{{ user.get_full_name|default:user.username }}</h2>
+    <div class="small text-body-secondary">{{ p.get_role_display }}{% if p.position %} · {{ p.position }}{% endif %}{% if p.department %} · {{ p.department }}{% endif %}</div>
+    {% if p.support_group %}<div class="small mt-1">Группа поддержки: {{ p.support_group }}</div>{% endif %}
+  </div></div>
+  <div class="col-lg-7"><div class="card card-body">
+    <h2 class="h6">Бот ИТ-поддержки</h2>
+    <p class="small">Создавайте заявки и получайте уведомления о статусе во ВКонтакте или в MAX. Чтобы бот вас узнал, отправьте ему код:</p>
+    <div class="d-flex align-items-center gap-3 mb-3">
+      <span class="font-monospace fs-3 border rounded px-3 py-1 bg-body-tertiary">{{ p.link_code }}</span>
+      <form method="post">{% csrf_token %}<button class="btn btn-sm btn-outline-secondary" name="action" value="new_code">Новый код</button></form>
+    </div>
+    <ul class="list-group list-group-flush small">
+      <li class="list-group-item d-flex justify-content-between align-items-center px-0">ВКонтакте
+        {% if p.vk_id %}<form method="post">{% csrf_token %}<span class="badge text-bg-success me-2">привязан</span><button class="btn btn-sm btn-link text-danger p-0" name="action" value="unlink_vk">отвязать</button></form>{% else %}<span class="badge text-bg-secondary">не привязан</span>{% endif %}</li>
+      <li class="list-group-item d-flex justify-content-between align-items-center px-0">MAX
+        {% if p.max_id %}<form method="post">{% csrf_token %}<span class="badge text-bg-success me-2">привязан</span><button class="btn btn-sm btn-link text-danger p-0" name="action" value="unlink_max">отвязать</button></form>{% else %}<span class="badge text-bg-secondary">не привязан</span>{% endif %}</li>
+    </ul>
+  </div></div>
+</div>
+{% endblock %}

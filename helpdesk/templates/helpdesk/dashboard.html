@@ -1,0 +1,45 @@
+{% extends "helpdesk/base.html" %}{% load static helpdesk_tags %}
+{% block title %}Дашборд{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <h1 class="h4 mb-0">Показатели ИТ-поддержки</h1>
+  <form class="d-flex gap-2" method="get">
+    <select class="form-select form-select-sm" name="days" onchange="this.form.submit()">
+      <option value="7" {% if days == 7 %}selected{% endif %}>7 дней</option>
+      <option value="30" {% if days == 30 %}selected{% endif %}>30 дней</option>
+      <option value="90" {% if days == 90 %}selected{% endif %}>90 дней</option>
+    </select>
+    <a class="btn btn-sm btn-outline-success text-nowrap" href="{% url 'export_excel' %}?days={{ days }}">Выгрузить в Excel</a>
+  </form>
+</div>
+<div class="row g-3 mb-3">
+  <div class="col-6 col-xl-2"><div class="card card-body"><div class="small text-body-secondary">Заявок</div><div class="fs-3 fw-semibold">{{ s.total }}</div></div></div>
+  <div class="col-6 col-xl-2"><div class="card card-body"><div class="small text-body-secondary">Открыто</div><div class="fs-3 fw-semibold">{{ s.open }}</div></div></div>
+  <div class="col-6 col-xl-2"><div class="card card-body"><div class="small text-body-secondary">Просрочено</div><div class="fs-3 fw-semibold {% if s.overdue %}text-danger{% endif %}">{{ s.overdue }}</div></div></div>
+  <div class="col-6 col-xl-2"><div class="card card-body"><div class="small text-body-secondary">Ср. время решения</div><div class="fs-5 fw-semibold">{{ s.avg_minutes|minutes_human }}</div></div></div>
+  <div class="col-6 col-xl-2"><div class="card card-body"><div class="small text-body-secondary">Соблюдение SLA</div><div class="fs-3 fw-semibold">{% if s.sla_pct is not None %}{{ s.sla_pct }}%{% else %}—{% endif %}</div></div></div>
+  <div class="col-6 col-xl-2"><div class="card card-body"><div class="small text-body-secondary">Ср. оценка / решено БЗ</div><div class="fs-5 fw-semibold">{{ s.rating|floatformat:1|default:"—" }} / {{ s.kb_helped }}</div></div></div>
+</div>
+<div class="row g-3">
+  <div class="col-lg-8"><div class="card card-body"><h2 class="h6">Поступление заявок по дням</h2><canvas id="byDay" height="110"></canvas></div></div>
+  <div class="col-lg-4"><div class="card card-body"><h2 class="h6">Каналы обращений</h2><div style="height:250px"><canvas id="byChannel"></canvas></div></div></div>
+  <div class="col-lg-6"><div class="card card-body"><h2 class="h6">Заявки по категориям</h2><canvas id="byCat" height="200"></canvas></div></div>
+  <div class="col-lg-6"><div class="card card-body"><h2 class="h6">Открытые заявки на специалиста</h2>
+    <table class="table table-sm mb-0">
+      {% for u in load %}<tr><td>{{ u.get_full_name }}</td><td class="w-50"><div class="progress" style="height:10px"><div class="progress-bar {% if u.open_count >= 8 %}bg-warning{% else %}bg-success{% endif %}" style="width:{% widthratio u.open_count 10 100 %}%"></div></div></td><td class="text-end">{{ u.open_count }}</td></tr>{% endfor %}
+    </table>
+    <div class="small text-body-secondary mt-2">Шкала до 10 заявок, жёлтым — перегрузка (8+).</div>
+  </div></div>
+</div>
+{{ chart|json_script:"chart-data" }}
+{% endblock %}
+{% block scripts %}
+<script src="{% static "helpdesk/vendor/chart.umd.js" %}"></script>
+<script>
+const c = JSON.parse(document.getElementById('chart-data').textContent);
+const blue = '#2457d6';
+new Chart(document.getElementById('byDay'), {type: 'line', data: {labels: c.day_labels, datasets: [{label: 'Заявок', data: c.day_values, borderColor: blue, backgroundColor: 'rgba(36,87,214,.12)', fill: true, tension: .3}]}, options: {plugins: {legend: {display: false}}, scales: {y: {beginAtZero: true, ticks: {precision: 0}}}}});
+new Chart(document.getElementById('byCat'), {type: 'bar', data: {labels: c.cat_labels, datasets: [{data: c.cat_values, backgroundColor: blue}]}, options: {indexAxis: 'y', plugins: {legend: {display: false}}, scales: {x: {beginAtZero: true, ticks: {precision: 0}}}}});
+new Chart(document.getElementById('byChannel'), {type: 'doughnut', data: {labels: c.ch_labels, datasets: [{data: c.ch_values, backgroundColor: ['#2457d6', '#0077ff', '#7b5cff', '#9aa5b5']}]}, options: {maintainAspectRatio: false, plugins: {legend: {position: "bottom"}}}});
+</script>
+{% endblock %}

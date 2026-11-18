@@ -1,0 +1,38 @@
+{% extends "helpdesk/base.html" %}{% load helpdesk_tags %}
+{% block title %}Очередь заявок{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3">Очередь заявок</h1>
+<form class="d-flex flex-wrap gap-2 mb-3" method="get">
+  <select class="form-select form-select-sm w-auto" name="scope" onchange="this.form.submit()">
+    <option value="mine" {% if scope == "mine" %}selected{% endif %}>Мои</option>
+    <option value="group" {% if scope == "group" %}selected{% endif %}>Моя группа</option>
+    <option value="unassigned" {% if scope == "unassigned" %}selected{% endif %}>Без исполнителя</option>
+    <option value="all" {% if scope == "all" %}selected{% endif %}>Все</option>
+  </select>
+  <select class="form-select form-select-sm w-auto" name="status" onchange="this.form.submit()">
+    <option value="open" {% if status == "open" %}selected{% endif %}>Открытые</option>
+    <option value="" {% if status == "" %}selected{% endif %}>Все статусы</option>
+    {% for v, l in statuses %}<option value="{{ v }}" {% if status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+  </select>
+  <select class="form-select form-select-sm w-auto" name="category" onchange="this.form.submit()">
+    <option value="">Все категории</option>
+    {% for c in categories %}<option value="{{ c.pk }}" {% if category == c.pk|stringformat:"s" %}selected{% endif %}>{{ c }}</option>{% endfor %}
+  </select>
+</form>
+<div class="card"><div class="table-responsive"><table class="table table-hover mb-0">
+  <thead class="table-light"><tr><th>№</th><th>Тема</th><th>Автор</th><th>Категория</th><th>Приоритет</th><th>Статус</th><th>Исполнитель</th><th>SLA</th></tr></thead>
+  <tbody>
+  {% for t in tickets %}
+    <tr onclick="location='{% url 'ticket_detail' t.pk %}'" style="cursor:pointer">
+      <td class="text-body-secondary">{{ t.pk }}</td>
+      <td><a class="text-decoration-none" href="{% url 'ticket_detail' t.pk %}">{{ t.title }}</a>{% if t.escalated %} <span class="badge text-bg-danger">!</span>{% endif %}</td>
+      <td class="small">{{ t.author.get_full_name }}</td><td class="small">{{ t.category }}</td>
+      <td>{{ t|priority_badge }}</td><td>{{ t|status_badge }}</td>
+      <td class="small">{{ t.assignee.get_full_name|default:"—" }}</td><td>{{ t|sla_badge }}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="8" class="text-center text-body-secondary py-4">Заявок нет 🎉</td></tr>
+  {% endfor %}
+  </tbody></table></div></div>
+<p class="small text-body-secondary mt-2">SLA: <span class="badge text-bg-success">в норме</span> <span class="badge text-bg-warning">осталось &lt; 25%</span> <span class="badge text-bg-danger">просрочено</span></p>
+{% endblock %}

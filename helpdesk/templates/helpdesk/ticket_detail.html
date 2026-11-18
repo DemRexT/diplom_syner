@@ -1,0 +1,103 @@
+{% extends "helpdesk/base.html" %}{% load helpdesk_tags %}
+{% block title %}Заявка #{{ t.pk }}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+  <div>
+    <h1 class="h4 mb-1">#{{ t.pk }} · {{ t.title }}</h1>
+    <div>{{ t|status_badge }} {{ t|priority_badge }} {% if t.escalated %}<span class="badge text-bg-danger">Эскалирована</span>{% endif %}</div>
+  </div>
+  {% if is_it and t.is_open %}
+  <div class="d-flex gap-2 flex-wrap">
+    {% if t.assignee != user %}
+      <form method="post">{% csrf_token %}<input type="hidden" name="action" value="take"><button class="btn btn-outline-primary">Взять себе</button></form>
+    {% endif %}
+    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="status"><input type="hidden" name="status" value="waiting"><button class="btn btn-outline-secondary">Ожидать ответа</button></form>
+    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="status"><input type="hidden" name="status" value="resolved"><button class="btn btn-success">Решена</button></form>
+  </div>
+  {% endif %}
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card card-body mb-3">
+      <div class="small text-body-secondary mb-1">{{ t.author.get_full_name }} · {{ t.created_at|date:"d.m.Y H:i" }} · {{ t.get_channel_display }}</div>
+      <div style="white-space:pre-wrap">{{ t.description }}</div>
+      {% if t.attachments.exists %}<div class="mt-2 small">📎 {% for a in t.attachments.all %}<a href="{{ a.file.url }}" target="_blank">{{ a.filename }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</div>{% endif %}
+    </div>
+
+    <div class="card card-body">
+      <h2 class="h6 mb-3">История и переписка</h2>
+      <div class="d-flex flex-column gap-2">
+      {% for kind, at, e in events %}
+        {% if kind == "h" %}
+          <div class="small {% if e.is_auto %}ev-auto{% else %}text-body-secondary{% endif %}">
+            <span class="font-monospace">{{ at|date:"d.m H:i" }}</span>
+            {% if e.is_auto %}⚙{% endif %} {{ e.action }}{% if e.actor and not e.is_auto %} — {{ e.actor.get_full_name }}{% endif %}
+          </div>
+        {% else %}
+          <div class="border rounded p-2 {% if e.author == t.author %}bg-body-tertiary{% else %}bg-white{% endif %}">
+            <div class="small"><strong>{{ e.author.get_full_name }}</strong>
+              <span class="text-body-secondary">{{ at|date:"d.m H:i" }}{% if e.channel != "portal" %} · через {{ e.get_channel_display }}{% endif %}</span></div>
+            <div style="white-space:pre-wrap">{{ e.text }}</div>
+          </div>
+        {% endif %}
+      {% endfor %}
+      </div>
+      {% if t.status != "closed" %}
+      <form method="post" class="mt-3">{% csrf_token %}<input type="hidden" name="action" value="comment">
+        <textarea class="form-control mb-2" name="text" rows="3" placeholder="Написать ответ…" required></textarea>
+        <button class="btn btn-primary btn-sm">Отправить</button>
+      </form>
+      {% endif %}
+    </div>
+
+    {% if is_author and t.status == "resolved" %}
+    <div class="card card-body mt-3">
+      <h2 class="h6">Проблема решена? Оцените работу</h2>
+      <form method="post" class="d-flex gap-2 flex-wrap">{% csrf_token %}<input type="hidden" name="action" value="rate">
+        {% for v in "12345" %}<button name="rating" value="{{ v }}" class="btn btn-outline-warning">{{ v }} ⭐</button>{% endfor %}
+      </form>
+      <form method="post" class="mt-3">{% csrf_token %}<input type="hidden" name="action" value="reopen">
+        <input class="form-control mb-2" name="reason" placeholder="Что осталось не так?">
+        <button class="btn btn-outline-danger btn-sm">Вернуть в работу</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card card-body small">
+      <dl class="row mb-0">
+        <dt class="col-5 fw-normal text-body-secondary">Категория</dt><dd class="col-7">{{ t.category }}</dd>
+        <dt class="col-5 fw-normal text-body-secondary">Группа</dt><dd class="col-7">{{ t.category.support_group }}</dd>
+        <dt class="col-5 fw-normal text-body-secondary">Исполнитель</dt><dd class="col-7">{{ t.assignee.get_full_name|default:"не назначен" }}</dd>
+        <dt class="col-5 fw-normal text-body-secondary">Автор</dt><dd class="col-7">{{ t.author.get_full_name }}{% if t.author.profile.department %}<br><span class="text-body-secondary">{{ t.author.profile.department }}</span>{% endif %}</dd>
+        <dt class="col-5 fw-normal text-body-secondary">Срок SLA</dt><dd class="col-7">{{ t.sla_deadline|date:"d.m H:i"|default:"—" }} {{ t|sla_badge }}</dd>
+        {% if t.rating %}<dt class="col-5 fw-normal text-body-secondary">Оценка</dt><dd class="col-7">{{ t.rating }} из 5</dd>{% endif %}
+      </dl>
+      {% if t.sla_deadline %}
+      <div class="progress mt-2" role="progressbar" style="height:6px">
+        <div class="progress-bar {% if t.sla_state == 'overdue' %}bg-danger{% elif t.sla_state == 'warning' %}bg-warning{% else %}bg-success{% endif %}" style="width: {{ t.sla_used_percent }}%"></div>
+      </div>
+      <div class="text-body-secondary mt-1">Использовано {{ t.sla_used_percent }}% времени SLA</div>
+      {% endif %}
+    </div>
+
+    {% if is_it %}
+    <div class="card card-body mt-3">
+      <form method="post" class="mb-3">{% csrf_token %}<input type="hidden" name="action" value="status">
+        <label class="form-label small" for="id_status">Статус</label>
+        <div class="input-group input-group-sm">{{ status_form.status }}<button class="btn btn-outline-primary">OK</button></div>
+      </form>
+      {% if is_manager %}
+      <form method="post">{% csrf_token %}<input type="hidden" name="action" value="assign">
+        <label class="form-label small" for="id_assignee">Переназначить</label>
+        <div class="input-group input-group-sm">{{ assign_form.assignee }}<button class="btn btn-outline-primary">OK</button></div>
+      </form>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script>document.querySelectorAll('select').forEach(s => s.classList.add('form-select'));</script>{% endblock %}

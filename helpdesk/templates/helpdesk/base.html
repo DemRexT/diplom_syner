@@ -1,0 +1,55 @@
+{% load static %}<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}ServiceDesk ПМ{% endblock %}</title>
+  <link href="{% static "helpdesk/vendor/bootstrap.min.css" %}" rel="stylesheet">
+  <style>
+    body { background: #f3f5f8; }
+    .sidebar { min-height: 100vh; background: #fff; border-right: 1px solid #dee2e6; }
+    .sidebar .nav-link { color: #495057; border-radius: .4rem; }
+    .sidebar .nav-link.active { background: #e3ebfd; color: #2457d6; font-weight: 600; }
+    .brand { font-weight: 700; color: #2457d6; }
+    .ev-auto { color: #2457d6; }
+    .kb-hint { border: 1px dashed #2457d6; background: #eef3fe; }
+    .card { border-color: #e3e7ee; }
+    table td, table th { vertical-align: middle; }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+{% if user.is_authenticated %}
+<div class="container-fluid">
+  <div class="row">
+    <nav class="col-md-3 col-lg-2 sidebar p-3 d-flex flex-column gap-1">
+      <a href="{% url 'home' %}" class="brand fs-5 mb-3 text-decoration-none">ServiceDesk ПМ</a>
+      {% with u=request.resolver_match.url_name %}
+      <a class="nav-link {% if u == 'ticket_create' %}active{% endif %}" href="{% url 'ticket_create' %}">➕ Новая заявка</a>
+      <a class="nav-link {% if u == 'my_tickets' %}active{% endif %}" href="{% url 'my_tickets' %}">Мои заявки</a>
+      {% if is_it %}<a class="nav-link {% if u == 'queue' %}active{% endif %}" href="{% url 'queue' %}">Очередь заявок</a>{% endif %}
+      {% if is_manager %}<a class="nav-link {% if u == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">Дашборд</a>{% endif %}
+      <a class="nav-link {% if u == 'kb_list' or u == 'kb_detail' %}active{% endif %}" href="{% url 'kb_list' %}">База знаний</a>
+      <a class="nav-link {% if u == 'profile' %}active{% endif %}" href="{% url 'profile' %}">Профиль и боты</a>
+      {% if user.is_superuser %}<a class="nav-link" href="/admin/">Администрирование</a>{% endif %}
+      {% endwith %}
+      <div class="mt-auto small text-body-secondary pt-4">
+        {{ user.get_full_name|default:user.username }}<br>{{ profile.get_role_display }}
+        <form method="post" action="{% url 'logout' %}" class="mt-2">{% csrf_token %}
+          <button class="btn btn-sm btn-outline-secondary">Выйти</button>
+        </form>
+      </div>
+    </nav>
+    <main class="col-md-9 col-lg-10 p-4">
+      {% for m in messages %}<div class="alert alert-{{ m.tags|default:'info' }} alert-dismissible">{{ m }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>{% endfor %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% else %}
+  {% block anon %}{% endblock %}
+{% endif %}
+<script src="{% static "helpdesk/vendor/bootstrap.bundle.min.js" %}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,78 @@
+{% extends "helpdesk/base.html" %}
+{% block title %}Новая заявка{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3">Опишите проблему</h1>
+<div class="row g-4">
+  <div class="col-lg-8">
+    <form method="post" enctype="multipart/form-data" class="card card-body gap-3">{% csrf_token %}
+      <div><label class="form-label" for="id_title">Тема</label>{{ form.title.errors }}
+        <input class="form-control" id="id_title" name="title" maxlength="200" required autocomplete="off"
+               placeholder="Кратко: что не работает" value="{{ form.title.value|default:'' }}"></div>
+      <div id="kb-box" class="kb-hint rounded p-3 d-none">
+        <strong>Возможно, это поможет решить проблему сразу:</strong>
+        <ul id="kb-list" class="mb-1 mt-2"></ul>
+        <span class="small text-body-secondary">Не помогло? Продолжайте заполнять заявку.</span>
+      </div>
+      <div><label class="form-label" for="id_description">Описание</label>{{ form.description.errors }}
+        <textarea class="form-control" id="id_description" name="description" rows="5" required
+                  placeholder="Где, когда началось, текст ошибки">{{ form.description.value|default:'' }}</textarea></div>
+      <div class="row g-3">
+        <div class="col-md-6"><label class="form-label" for="id_category">Категория</label>
+          <select class="form-select" id="id_category" name="category">
+            <option value="">Определить автоматически</option>
+            {% for c in form.fields.category.queryset %}<option value="{{ c.pk }}">{{ c }}</option>{% endfor %}
+          </select></div>
+        <div class="col-md-6"><label class="form-label" for="id_priority">Приоритет</label>
+          <select class="form-select" id="id_priority" name="priority">
+            <option value="">Определить автоматически</option>
+            {% for p in form.fields.priority.queryset %}<option value="{{ p.pk }}">{{ p }}</option>{% endfor %}
+          </select></div>
+      </div>
+      <div><label class="form-label" for="id_files">Вложения (скриншоты)</label>
+        <input class="form-control" type="file" id="id_files" name="files" multiple></div>
+      <div><button class="btn btn-primary">Отправить заявку</button></div>
+    </form>
+  </div>
+  <div class="col-lg-4">
+    <div class="card card-body">
+      <h2 class="h6">Система определила автоматически</h2>
+      <dl class="row small mb-0">
+        <dt class="col-5 fw-normal text-body-secondary">Категория</dt><dd class="col-7" id="auto-cat">—</dd>
+        <dt class="col-5 fw-normal text-body-secondary">Приоритет</dt><dd class="col-7" id="auto-prio">—</dd>
+        <dt class="col-5 fw-normal text-body-secondary">Срок по SLA</dt><dd class="col-7" id="auto-sla">—</dd>
+      </dl>
+      <p class="small text-body-secondary mb-0 mt-2">Начните печатать — подсказки обновятся. Исполнитель будет назначен сразу после отправки.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  const title = document.getElementById('id_title'), desc = document.getElementById('id_description');
+  const box = document.getElementById('kb-box'), list = document.getElementById('kb-list');
+  let timer;
+  function update() {
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      const params = new URLSearchParams({title: title.value, description: desc.value});
+      const r = await fetch('{% url "suggest" %}?' + params);
+      const d = await r.json();
+      list.innerHTML = '';
+      d.articles.forEach(a => {
+        const li = document.createElement('li');
+        const link = document.createElement('a');
+        link.href = '/kb/' + a.id + '/'; link.target = '_blank'; link.textContent = a.title;
+        li.appendChild(link); list.appendChild(li);
+      });
+      box.classList.toggle('d-none', d.articles.length === 0);
+      document.getElementById('auto-cat').textContent = d.category ? d.category + ' (' + d.confidence + '%)' : '—';
+      document.getElementById('auto-prio').textContent = d.priority || '—';
+      document.getElementById('auto-sla').textContent = d.deadline ? 'до ' + d.deadline : '—';
+    }, 350);
+  }
+  title.addEventListener('input', update);
+  desc.addEventListener('input', update);
+})();
+</script>
+{% endblock %}

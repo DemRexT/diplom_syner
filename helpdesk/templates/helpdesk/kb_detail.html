@@ -1,0 +1,12 @@
+{% extends "helpdesk/base.html" %}
+{% block title %}{{ a.title }}{% endblock %}
+{% block content %}
+<a href="{% url 'kb_list' %}" class="small">← База знаний</a>
+<h1 class="h4 mt-2">{{ a.title }}</h1>
+<div class="small text-body-secondary mb-3">{{ a.category|default:"" }}</div>
+<div class="card card-body" style="white-space:pre-wrap; max-width:75ch">{{ a.body }}</div>
+<div class="d-flex gap-2 mt-3">
+  <form method="post" action="{% url 'kb_helped' a.pk %}">{% csrf_token %}<button class="btn btn-success">✅ Помогло</button></form>
+  <a class="btn btn-outline-primary" href="{% url 'ticket_create' %}">Не помогло — создать заявку</a>
+</div>
+{% endblock %}
