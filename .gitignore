@@ -5,3 +5,7 @@ staticfiles/
 venv/
 __pycache__/
 *.pyc
+
+# PyCharm: общие конфигурации запуска храним в репозитории, остальное — нет
+.idea/*
+!.idea/runConfigurations/

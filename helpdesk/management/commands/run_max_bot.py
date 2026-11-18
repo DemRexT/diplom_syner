@@ -9,4 +9,10 @@ class Command(BaseCommand):
     help = "Запуск бота ИТ-поддержки в мессенджере MAX (long polling)"
 
     def handle(self, *args, **options):
-        max_bot.run_forever(partial(core.handle, "max"))
+        try:
+            max_bot.run_forever(partial(core.handle, "max"))
+        except max_bot.MaxError as exc:
+            self.stderr.write(self.style.ERROR(f"Бот MAX не запущен: {exc}"))
+            self.stderr.write("Впишите MAX_TOKEN в файл .env (см. README, раздел «Подключение ботов»).")
+        except KeyboardInterrupt:
+            self.stdout.write("Бот остановлен.")

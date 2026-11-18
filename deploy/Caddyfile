@@ -1,0 +1,13 @@
+# DOMAIN=helpdesk.example.ru -> автоматический HTTPS (Let's Encrypt)
+# DOMAIN=:80                 -> просто HTTP по IP-адресу сервера (без домена)
+{$DOMAIN} {
+	encode gzip
+
+	# Загруженные вложения отдаёт Caddy напрямую
+	handle_path /media/* {
+		root * /srv/media
+		file_server
+	}
+
+	reverse_proxy web:8000
+}

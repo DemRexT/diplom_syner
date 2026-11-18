@@ -1,0 +1,7 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="▶ Сайт + SLA" type="CompoundRunConfigurationType">
+    <toRun name="2. Сайт" type="PythonConfigurationType" />
+    <toRun name="3. Проверка SLA" type="PythonConfigurationType" />
+    <method v="2" />
+  </configuration>
+</component>
