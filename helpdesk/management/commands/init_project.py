@@ -18,10 +18,15 @@ class Command(BaseCommand):
         call_command("migrate", interactive=False, verbosity=0)
         self.stdout.write(self.style.SUCCESS("База данных готова."))
 
-        from helpdesk.models import Ticket
+        from helpdesk.management.commands.load_kb import load_articles
+        from helpdesk.models import Category, Ticket
         if no_demo:
             return
         if Ticket.objects.exists():
+            if Category.objects.exists():
+                created, _, removed = load_articles(update=False)
+                if created or removed:
+                    self.stdout.write(f"База знаний: добавлено новых статей {created}.")
             self.stdout.write("В базе уже есть заявки — демо-данные не загружаю "
                               "(пересоздать: python manage.py seed_demo --clear).")
             return

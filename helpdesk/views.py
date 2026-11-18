@@ -290,7 +290,8 @@ def export_excel(request):
 @login_required
 def kb_list(request):
     q = request.GET.get("q", "").strip()
-    articles = kb.suggest(q, limit=20) if q else KBArticle.objects.select_related("category")
+    articles = kb.suggest(q, limit=20) if q else KBArticle.objects.select_related("category").order_by(
+        "category__name", "title")
     return render(request, "helpdesk/kb_list.html", {"articles": articles, "q": q})
 
 

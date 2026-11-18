@@ -1,16 +1,41 @@
 {% extends "helpdesk/base.html" %}
 {% block title %}База знаний{% endblock %}
 {% block content %}
-<h1 class="h4 mb-3">База знаний</h1>
-<form class="mb-3" method="get"><input class="form-control" name="q" value="{{ q }}" placeholder="Поиск: например, «не печатает принтер»"></form>
-<div class="list-group">
-{% for a in articles %}
-  <a class="list-group-item list-group-item-action" href="{% url 'kb_detail' a.pk %}">
-    <div class="fw-semibold">{{ a.title }}</div>
-    <div class="small text-body-secondary">{{ a.category|default:"" }} · просмотров {{ a.views }} · помогла {{ a.helped }} раз</div>
-  </a>
-{% empty %}
-  <div class="text-body-secondary">Ничего не найдено. <a href="{% url 'ticket_create' %}">Создать заявку</a></div>
-{% endfor %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <h1 class="h4 mb-0">База знаний</h1>
+  {% if not q %}<span class="small text-body-secondary">{{ articles|length }} инструкций</span>{% endif %}
 </div>
+<form class="mb-4" method="get">
+  <input class="form-control form-control-lg" name="q" value="{{ q }}" placeholder="Опишите проблему: «не печатает принтер», «забыл пароль», «vpn»…" autofocus>
+</form>
+{% if q %}
+  <h2 class="h6 text-body-secondary mb-2">Результаты по запросу «{{ q }}»</h2>
+  <div class="list-group mb-3">
+  {% for a in articles %}
+    <a class="list-group-item list-group-item-action" href="{% url 'kb_detail' a.pk %}">
+      <div class="fw-semibold">{{ a.title }}</div>
+      <div class="small text-body-secondary">{{ a.category|default:"" }}</div>
+    </a>
+  {% empty %}
+    <div class="text-body-secondary">Ничего не найдено. Попробуйте другие слова или <a href="{% url 'ticket_create' %}">создайте заявку</a>.</div>
+  {% endfor %}
+  </div>
+  <a href="{% url 'kb_list' %}" class="small">← Все статьи</a>
+{% else %}
+  <div class="row g-3">
+  {% regroup articles by category as groups %}
+  {% for g in groups %}
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-header bg-body fw-semibold">{{ g.grouper|default:"Без категории" }} <span class="text-body-secondary fw-normal small">· {{ g.list|length }}</span></div>
+        <div class="list-group list-group-flush">
+          {% for a in g.list %}
+            <a class="list-group-item list-group-item-action small" href="{% url 'kb_detail' a.pk %}">{{ a.title }}</a>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+  </div>
+{% endif %}
 {% endblock %}
