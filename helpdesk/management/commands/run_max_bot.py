@@ -13,6 +13,9 @@ class Command(BaseCommand):
             max_bot.run_forever(partial(core.handle, "max"))
         except max_bot.MaxError as exc:
             self.stderr.write(self.style.ERROR(f"Бот MAX не запущен: {exc}"))
-            self.stderr.write("Впишите MAX_TOKEN в файл .env (см. README, раздел «Подключение ботов»).")
+            if "Не задан" in str(exc):
+                self.stderr.write("Впишите MAX_TOKEN в файл .env (см. README, раздел «Подключение ботов»).")
+            else:
+                self.stderr.write("Проверьте токен и настройки (см. README, раздел «Подключение ботов»).")
         except KeyboardInterrupt:
             self.stdout.write("Бот остановлен.")
