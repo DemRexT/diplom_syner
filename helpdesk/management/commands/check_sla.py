@@ -1,6 +1,7 @@
 import time
 
 from django.core.management.base import BaseCommand
+from django.db.utils import OperationalError, ProgrammingError
 
 from helpdesk.services.tickets import check_sla
 
@@ -13,7 +14,13 @@ class Command(BaseCommand):
 
     def handle(self, *args, loop=0, **options):
         while True:
-            stats = check_sla()
+            try:
+                stats = check_sla()
+            except (OperationalError, ProgrammingError):
+                # таблиц ещё нет — сайт при запуске создаст их сам
+                self.stdout.write("База данных ещё не подготовлена, жду 10 с…")
+                time.sleep(10)
+                continue
             self.stdout.write(
                 f"SLA: предупреждений {stats['warned']}, эскалаций {stats['escalated']}, "
                 f"автозакрыто {stats['closed']}"
